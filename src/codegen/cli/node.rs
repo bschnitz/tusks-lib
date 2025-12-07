@@ -4,16 +4,15 @@ use quote::quote;
 use crate::{Argument, Tusk, TusksNode};
 
 impl TusksNode {
-    pub fn build_cli(&self, command_var: &str, path_prefix_var: &str, path_sep_var: &str) -> TokenStream {
+    pub fn build_cli(&self, command_var: &str, path_prefix_var: &str, path_sep: &str) -> TokenStream {
         let command_ident = syn::Ident::new(command_var, Span::call_site());
         let path_prefix_ident = syn::Ident::new(path_prefix_var, Span::call_site());
-        let path_sep_ident = syn::Ident::new(path_sep_var, Span::call_site());
         
         let mut statements = Vec::new();
         
         // Add subcommands for all tusks in this node
         for tusk in &self.tusks {
-            let tusk_code = tusk.build_subcommand(&path_prefix_ident, &path_sep_ident);
+            let tusk_code = tusk.build_subcommand(&path_prefix_ident, path_sep);
             statements.push(quote! {
                 let subcommand = #tusk_code;
                 #command_ident = #command_ident.subcommand(subcommand);
@@ -48,12 +47,9 @@ impl TusksNode {
             
             statements.push(quote! {
                 let mut link_prefix = #path_prefix_ident.clone();
-                if !link_prefix.is_empty() {
-                    link_prefix.push(#path_sep_ident.clone());
-                }
                 link_prefix.push(#link_name.to_string());
                 
-                #command_ident = #path_parts(#command_ident, link_prefix, #path_sep_ident.clone());
+                #command_ident = #path_parts(#command_ident, link_prefix);
             });
         }
         
@@ -64,13 +60,10 @@ impl TusksNode {
             // Build new path_prefix for child
             statements.push(quote! {
                 let mut child_prefix = #path_prefix_ident.clone();
-                if !child_prefix.is_empty() {
-                    child_prefix.push(#path_sep_ident.clone());
-                }
                 child_prefix.push(#child_module.to_string());
             });
             
-            let child_build = child.build_cli(command_var, "child_prefix", path_sep_var);
+            let child_build = child.build_cli(command_var, "child_prefix", path_sep);
             statements.push(child_build);
         }
         
@@ -81,18 +74,15 @@ impl TusksNode {
 }
 
 impl Tusk {
-    pub fn build_subcommand(&self, path_prefix_ident: &syn::Ident, path_sep_ident: &syn::Ident) -> TokenStream {
+    pub fn build_subcommand(&self, path_prefix_ident: &syn::Ident, path_sep: &str) -> TokenStream {
         let tusk_name = &self.name;
         
-        // Build the full command name at runtime
+        // Build the full command name at compile-time
         let command_name_code = quote! {
             {
                 let mut parts = #path_prefix_ident.clone();
-                if !parts.is_empty() {
-                    parts.push(#path_sep_ident.clone());
-                }
                 parts.push(#tusk_name.to_string());
-                parts.join("")
+                parts.join(#path_sep)
             }
         };
         
