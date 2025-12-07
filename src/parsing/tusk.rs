@@ -1,12 +1,12 @@
 use crate::models::{Argument, Tusk};
 use crate::parsing::types::DefaultArguments;
-use std::collections::HashMap;
+use indexmap::IndexMap;
 use syn::{Error, ItemFn};
 
 impl Tusk {
     pub fn from_func(func: &ItemFn) -> Result<Self, Error> {
         let name = func.sig.ident.to_string();
-        let mut arguments = HashMap::new();
+        let mut arguments = IndexMap::new();
 
         // Extract defaults with span information
         let defaults = DefaultArguments::from_func(func)?;

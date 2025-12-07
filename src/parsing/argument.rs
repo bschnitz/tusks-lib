@@ -45,11 +45,14 @@ impl Argument {
         // Look up default value for this argument
         let default = defaults.get(&arg_name).cloned();
 
+        let flag = type_display == "bool" && !optional;
+
         Ok(Some(Argument {
             name: arg_name,
             type_: type_display,
             default,
             optional,
+            flag,
             value: None,
         }))
     }

@@ -1,5 +1,6 @@
 use crate::models::{Argument};
 use std::collections::HashMap;
+use indexmap::IndexMap;
 use proc_macro2::{Span, TokenStream, TokenTree};
 use syn::{Error, ItemFn, Attribute, spanned::Spanned};
 
@@ -191,7 +192,7 @@ impl DefaultArguments {
     /// Validate that all default values refer to existing arguments
     pub fn validate_against_arguments(
         &self,
-        arguments: &HashMap<String, Argument>,
+        arguments: &IndexMap<String, Argument>,
     ) -> Result<(), Error> {
         for default in self.defaults.values() {
             if !arguments.contains_key(&default.name) {
@@ -217,7 +218,7 @@ impl DefaultArguments {
     /// Validate that optional arguments (Option<T>) don't have default values
     pub fn validate_no_defaults_for_optional(
         &self,
-        arguments: &HashMap<String, Argument>,
+        arguments: &IndexMap<String, Argument>,
     ) -> Result<(), Error> {
         for default in self.defaults.values() {
             if let Some(arg) = arguments.get(&default.name) {

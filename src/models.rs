@@ -1,9 +1,9 @@
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 /// A tusks module or submodule which may contain of
 /// - tusks (public functions in this module)
 /// - childs (public submodules of this module)
-/// - links (sumobudules refered to with a `use ...` statement)
+/// - links (sumobudules refered to with a `pub use ...` statement)
 #[derive(Debug)]
 pub struct TusksNode {
     pub module_name: String,
@@ -24,7 +24,7 @@ pub struct LinkNode {
 #[derive(Debug)]
 pub struct Tusk {
     pub name: String, // the function/tusk name
-    pub arguments: HashMap<String, Argument>, // argument name => argument
+    pub arguments: IndexMap <String, Argument>, // argument name => argument
 }
 
 /// Essentially an argument of a function representing a tusk
@@ -38,5 +38,6 @@ pub struct Argument {
     pub type_: String, // rust type as string (just for cli-Docu)
     pub default: Option<String>, // default values for the argument
     pub optional: bool, // is the argument an optional argument
+    pub flag: bool, // is the argument a flag (bool type)
     pub value: Option<String>, // The actual value if already set
 }

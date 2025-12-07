@@ -17,7 +17,7 @@ impl Tusk {
             tusks::Tusk {
                 name: #name.to_string(),
                 arguments: {
-                    let mut map = std::collections::HashMap::new();
+                    let mut map = tusks::indexmap::IndexMap::new();
                     #(#args_code)*
                     map
                 },

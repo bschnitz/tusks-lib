@@ -11,6 +11,7 @@ impl Argument {
             None => quote! { None },
         };
         let optional = self.optional;
+        let flag = self.flag;
         let value = match &self.value {
             Some(v) => quote! { Some(#v.to_string()) },
             None => quote! { None },
@@ -22,6 +23,7 @@ impl Argument {
                 type_: #type_.to_string(),
                 default: #default,
                 optional: #optional,
+                flag: #flag,
                 value: #value,
             }
         }
