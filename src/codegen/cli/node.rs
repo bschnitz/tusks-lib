@@ -106,49 +106,54 @@ impl Tusk {
 }
 
 impl Argument {
-    pub fn build_arg(&self) -> TokenStream {
+    pub fn build_arg(&self) -> proc_macro2::TokenStream {
         let arg_name = &self.name;
-        
+        let value_name_upper = self.name.to_uppercase();
+
+        // Start with the basic Arg
         let mut arg_config = quote! {
             clap::Arg::new(#arg_name)
         };
-        
-        // Handle flags
+
+        // Flags (bool)
         if self.flag {
             arg_config = quote! {
-                #arg_config.action(clap::ArgAction::SetTrue)
+                #arg_config
+                    .action(clap::ArgAction::SetTrue)
             };
         } else {
-            // Regular arguments need a value - use the arg_name in uppercase as value_name
-            let value_name_upper = self.name.to_uppercase();
+            // Regular arguments need a value
             arg_config = quote! {
-                #arg_config.value_name(#value_name_upper)
+                #arg_config
+                    .value_name(#value_name_upper)
             };
+
+            // Required / Optional / Default logic
+            if let Some(default_val) = &self.default {
+                // Default automatically makes it not required
+                arg_config = quote! {
+                    #arg_config
+                        .default_value(#default_val)
+                };
+            } else if self.optional {
+                arg_config = quote! {
+                    #arg_config
+                        .required(false)
+                };
+            } else {
+                arg_config = quote! {
+                    #arg_config
+                        .required(true)
+                };
+            }
         }
-        
-        // Handle optional arguments
-        if !self.optional && !self.flag {
-            arg_config = quote! {
-                #arg_config.required(true)
-            };
-        } else if self.optional {
-            arg_config = quote! {
-                #arg_config.required(false)
-            };
-        }
-        
-        // Handle default values
-        if let Some(default_val) = &self.default {
-            arg_config = quote! {
-                #arg_config.default_value(#default_val)
-            };
-        }
-        
-        // Add long flag format
+
+        // Add long flag name at the end
         arg_config = quote! {
-            #arg_config.long(#arg_name)
+            #arg_config
+                .long(#arg_name)
         };
-        
+
         arg_config
     }
 }
