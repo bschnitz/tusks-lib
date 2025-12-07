@@ -6,12 +6,18 @@ use indexmap::IndexMap;
 /// - links (sumobudules refered to with a `pub use ...` statement)
 #[derive(Debug)]
 pub struct TusksNode {
-    pub module_name: String,
+    pub module_path: Vec<String>,
     pub is_link: bool,
     pub link_name: Option<String>,
     pub tusks: Vec<Tusk>,
     pub childs: Vec<TusksNode>,
     pub links: Vec<LinkNode>,
+}
+
+impl TusksNode {
+    pub fn get_module_name(&self) -> &String {
+        self.module_path.last().unwrap()
+    }
 }
 
 /// This is just a reference to a module defined elsewhere with a `use ...` statement

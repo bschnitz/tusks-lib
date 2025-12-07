@@ -14,9 +14,9 @@ impl TusksNode {
         
         // Create mirror submodules for all child nodes
         for child in &self.childs {
-            let child_name = syn::Ident::new(&child.module_name, Span::call_site());
+            let child_name = syn::Ident::new(&child.get_module_name(), Span::call_site());
             let mut child_path = path.to_vec();
-            child_path.push(child.module_name.clone());
+            child_path.push(child.get_module_name().clone());
             let child_mirror = child.create_mirror(&child_path);
             
             items.push(quote! {

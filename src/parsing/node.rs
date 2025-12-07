@@ -3,17 +3,16 @@ use syn::{Error, Item, ItemFn, ItemMod, UseTree, Visibility};
 
 impl TusksNode {
     /// Parse a Rust module into a TusksNode tree structure
-    pub fn from_module(module: &ItemMod) -> Result<Self, Error> {
-        let module_name = module.ident.to_string();
-
+    pub fn from_module(module: &ItemMod, mut path: Vec<String>) -> Result<Self, Error> {
         let items = module
             .content
             .as_ref()
             .map(|(_, items)| items.as_slice())
             .unwrap_or(&[]);
 
+        path.push(module.ident.to_string());
         let mut node = TusksNode {
-            module_name,
+            module_path: path,
             tusks: Vec::new(),
             childs: Vec::new(),
             links: Vec::new(),
@@ -28,7 +27,7 @@ impl TusksNode {
 
     /// Add a child module node
     fn add_child(&mut self, module: &ItemMod) -> Result<(), Error> {
-        let child_node = Self::from_module(module)?;
+        let child_node = Self::from_module(module, self.module_path.clone())?;
         self.childs.push(child_node);
         Ok(())
     }

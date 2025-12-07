@@ -4,7 +4,7 @@ use quote::quote;
 
 impl TusksNode {
     pub fn to_tokens(&self, path: &[String]) -> TokenStream {
-        let module_name = &self.module_name;
+        let module_path = &self.module_path;
         let is_link = self.is_link;
         
         let tusks_code = self.tusks.iter().map(|tusk| tusk.to_tokens());
@@ -12,7 +12,7 @@ impl TusksNode {
         // normal childs
         let childs_code = self.childs.iter().map(|child| {
             let mut child_path = path.to_vec();
-            child_path.push(child.module_name.clone());
+            child_path.push(child.get_module_name().clone());
             child.to_tokens(&child_path)
         });
         
@@ -43,7 +43,7 @@ impl TusksNode {
         quote! {
             {
                 let mut node = tusks::TusksNode {
-                    module_name: #module_name.to_string(),
+                    module_path: vec![#(#module_path.to_string()),*],
                     tusks: vec![#(#tusks_code),*],
                     childs: vec![#(#childs_code),*],
                     links: vec![#(#links_code),*],
