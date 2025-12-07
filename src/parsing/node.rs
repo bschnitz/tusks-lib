@@ -17,6 +17,8 @@ impl TusksNode {
             tusks: Vec::new(),
             childs: Vec::new(),
             links: Vec::new(),
+            is_link: false,
+            link_name: None
         };
 
         node.extract_module_items(items)?;
@@ -32,8 +34,8 @@ impl TusksNode {
     }
 
     /// Add a link node from a use statement
-    fn add_link(&mut self, module_path: Vec<String>) {
-        self.links.push(LinkNode { module_path });
+    fn add_link(&mut self, name: String) {
+        self.links.push(LinkNode { name });
     }
 
     /// Add a tusk (public function) to this node
@@ -56,7 +58,7 @@ impl TusksNode {
                 }
                 Item::Use(use_item) if matches!(use_item.vis, Visibility::Public(_)) => {
                     // Extract link nodes from 'use ...' statements
-                    self.extract_use_paths(&use_item.tree, vec![]);
+                    self.extract_use_names(&use_item.tree);
                 }
                 _ => {}
             }
@@ -64,32 +66,27 @@ impl TusksNode {
         Ok(())
     }
 
-    /// Recursively extract module paths from use statements
-    fn extract_use_paths(&mut self, tree: &UseTree, mut prefix: Vec<String>) {
+    fn extract_use_names(&mut self, tree: &UseTree) {
         match tree {
             UseTree::Path(use_path) => {
                 // use foo::<rest>
-                prefix.push(use_path.ident.to_string());
-                self.extract_use_paths(&use_path.tree, prefix);
+                self.extract_use_names(&use_path.tree);
             }
             UseTree::Name(use_name) => {
                 // use foo
-                prefix.push(use_name.ident.to_string());
-                self.add_link(prefix);
+                self.add_link(use_name.ident.to_string());
             }
             UseTree::Rename(use_rename) => {
-                // use foo as bar => take bar as path
-                let alias = use_rename.rename.to_string();
-                self.add_link(vec![alias]);
+                // use foo as bar => take bar as name
+                self.add_link(use_rename.rename.to_string());
             }
             UseTree::Glob(_) => {
-                // use foo::* => take foo as path
-                self.add_link(prefix);
+                // use foo::* => ignore
             }
             UseTree::Group(use_group) => {
                 // e.g. use foo::{bar, baz};
                 for item in &use_group.items {
-                    self.extract_use_paths(item, prefix.clone());
+                    self.extract_use_names(item);
                 }
             }
         }

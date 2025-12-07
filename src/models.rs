@@ -7,6 +7,8 @@ use std::collections::HashMap;
 #[derive(Debug)]
 pub struct TusksNode {
     pub module_name: String,
+    pub is_link: bool,
+    pub link_name: Option<String>,
     pub tusks: Vec<Tusk>,
     pub childs: Vec<TusksNode>,
     pub links: Vec<LinkNode>,
@@ -15,7 +17,7 @@ pub struct TusksNode {
 /// This is just a reference to a module defined elsewhere with a `use ...` statement
 #[derive(Debug)]
 pub struct LinkNode {
-    pub module_path: Vec<String>,
+    pub name: String,
 }
 
 /// A Tusk is essentially a public function in a tusks module.
