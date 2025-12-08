@@ -6,7 +6,7 @@ use crate::Argument;
 impl Argument {
     pub fn create_mirror_param(&self) -> TokenStream {
         let param_name = syn::Ident::new(&self.name, Span::call_site());
-        
+
         if self.flag {
             // Flags are always bool
             quote! {
@@ -22,10 +22,10 @@ impl Argument {
             }
         }
     }
-    
+
     pub fn create_conversion(&self) -> TokenStream {
         let param_name = syn::Ident::new(&self.name, Span::call_site());
-        
+
         if self.flag {
             // Flags are passed directly as bool
             quote! {

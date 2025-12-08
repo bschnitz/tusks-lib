@@ -4,12 +4,12 @@ use indexmap::IndexMap;
 use proc_macro2::{Span, TokenStream, TokenTree};
 use syn::{Error, ItemFn, Attribute, spanned::Spanned};
 
-#[derive(Debug, Clone)]  
-pub struct DefaultArgument {  
-    pub name: String,  
-    pub value: String,  
-    pub name_span: proc_macro2::Span,  
-}  
+#[derive(Debug, Clone)]
+pub struct DefaultArgument {
+    pub name: String,
+    pub value: String,
+    pub name_span: proc_macro2::Span,
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct DefaultArguments {
@@ -28,13 +28,13 @@ impl DefaultArguments {
     /// Parse all #[defaults(...)] attributes from a function
     pub fn from_func(func: &ItemFn) -> Result<Self, Error> {
         let mut collection = Self::new();
-        
+
         for attr in &func.attrs {
             if attr.path().is_ident("defaults") {
                 collection.parse_attribute(attr)?;
             }
         }
-        
+
         Ok(collection)
     }
 
@@ -51,7 +51,7 @@ impl DefaultArguments {
     }
 
     /// Parse key="value" pairs from token stream with strict comma-separated syntax
-    /// 
+    ///
     /// Validates the format: `key1="value1", key2="value2", ...`
     /// - Ensures '=' follows each key
     /// - Requires string literals for values
@@ -67,7 +67,7 @@ impl DefaultArguments {
             if ! iter.peek().is_some() {
                 break;
             }
-            
+
             self.digest_comma(&mut iter, &mut last_span)?;
         }
 

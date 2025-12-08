@@ -1,7 +1,7 @@
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-
-use crate::Tusk;
+use std::iter;
+use crate::{Tusk, codegen::util::misc::build_path_tokens};
 
 impl Tusk {
     pub fn create_mirror(&self, path: &[String]) -> TokenStream {
@@ -13,29 +13,17 @@ impl Tusk {
         }).collect();
         
         // Build the path to the original function
-        // Count supers: one for each element in path + 2 for mirror_module and __tusks_internal_module
+        // Count supers:
+        // one for each element in path + 2 for mirror_module and __tusks_internal_module
         let super_count = path.len() + 2;
         
-        // Build path as a single TokenStream
-        let mut full_path = TokenStream::new();
-        
-        // Add all the supers
-        for i in 0..super_count {
-            if i > 0 {
-                full_path.extend(quote! { :: });
-            }
-            full_path.extend(quote! { super });
-        }
-        
-        // Add the module path
-        for segment in path {
-            full_path.extend(quote! { :: });
-            let segment_ident = syn::Ident::new(segment, Span::call_site());
-            full_path.extend(quote! { #segment_ident });
-        }
-        
-        // Add the function name
-        full_path.extend(quote! { :: #fn_name });
+        // Build path as iterator and convert to TokenStream
+        let full_path = build_path_tokens(
+            iter::repeat("super")
+                .take(super_count)
+                .chain(path.iter().map(|s| s.as_str()))
+                .chain(iter::once(self.name.as_str()))
+        );
         
         // Create argument conversions for the function call
         let arg_conversions: Vec<TokenStream> = self.arguments.iter().map(|(_, arg)| {

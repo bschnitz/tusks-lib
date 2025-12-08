@@ -16,7 +16,7 @@ impl Argument {
             Some(v) => quote! { Some(#v.to_string()) },
             None => quote! { None },
         };
-        
+
         quote! {
             tusks::Argument {
                 name: #name.to_string(),

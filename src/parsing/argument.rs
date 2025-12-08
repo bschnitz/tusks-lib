@@ -66,8 +66,8 @@ impl Argument {
                 let segment = &type_path.path.segments[0];
 
                 // Check if the type name is "Option"
-                if segment.ident == "Option" || 
-                (type_path.path.segments.len() >= 2 && 
+                if segment.ident == "Option" ||
+                (type_path.path.segments.len() >= 2 &&
                 type_path.path.segments.last().unwrap().ident == "Option") {
                     // Check for angle bracketed generic arguments
                     if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
