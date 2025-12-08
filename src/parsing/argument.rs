@@ -1,28 +1,20 @@
-use crate::models::Argument;
+use crate::models::{Argument, NoDebug};
 use quote::quote;
-use std::collections::HashMap;
 use syn::{Error, FnArg};
 
 impl Argument {
     /// Create an Argument from a function argument (FnArg).
     /// Returns Ok(None) for receiver arguments (which are reported as errors).
     /// Returns Err for invalid patterns or other errors.
-    pub fn from_fn_arg(
-        arg: &FnArg,
-        defaults: &HashMap<String, String>,
-    ) -> Result<Option<Self>, Error> {
-        // Check for receiver (self) arguments
-        if let FnArg::Receiver(receiver) = arg {
-            return Err(Error::new_spanned(
-                receiver,
-                "Self receivers (&self, &mut self, self) are not supported in tusk functions",
-            ));
-        }
-
-        // Only process typed arguments
+    pub fn from_fn_arg(arg: &FnArg) -> Result<Option<Self>, Error> {
         let pat_type = match arg {
+            FnArg::Receiver(receiver) => {
+                return Err(Error::new_spanned(
+                    receiver,
+                    "Self receivers (&self, &mut self, self) are not supported in tusk functions",
+                ));
+            }
             FnArg::Typed(pat_type) => pat_type,
-            FnArg::Receiver(_) => unreachable!(), // Already handled above
         };
 
         // Extract argument name (only simple identifiers)
@@ -42,18 +34,24 @@ impl Argument {
         // Use inner type if optional, otherwise the full type
         let type_display = quote!(#inner_type).to_string().replace(" ", "");
 
-        // Look up default value for this argument
-        let default = defaults.get(&arg_name).cloned();
-
         let flag = type_display == "bool" && !optional;
 
         Ok(Some(Argument {
             name: arg_name,
             type_: type_display,
-            default,
+            default: None,
             optional,
             flag,
-            value: None,
+            positional: false,
+
+            count: None,
+            short: None,
+            help: None,
+            hidden: false,
+            value_hint: None,
+            arg_enum: None,
+            validator: None,
+            arg: Some(NoDebug(arg.clone()))
         }))
     }
 

@@ -1,4 +1,6 @@
+use clap::ValueHint;
 use indexmap::IndexMap;
+use syn::FnArg;
 
 /// A tusks module or submodule which may contain of
 /// - tusks (public functions in this module)
@@ -33,17 +35,40 @@ pub struct Tusk {
     pub arguments: IndexMap <String, Argument>, // argument name => argument
 }
 
-/// Essentially an argument of a function representing a tusk
-/// NOTE:
-/// - An argument is considered optional, if its type is Option<...>
-/// - If an argument has a default value, it cannot be optional by implementation
-/// This may seem a bit counterintuitive, but it simplifies the implementation and usage
+// Wrapper um ValueHint
+#[derive(Debug, Clone)]
+pub struct ValueHintWrapper(pub ValueHint);
+
+/// Represents how often an argument can appear
+#[derive(Debug)]
+pub struct ArgumentMultiplicity {
+    pub min: Option<u8>, // minimal number of values
+    pub max: Option<u8>, // maximal number of values
+}
+
+pub struct NoDebug<T>(pub T);
+
+impl<T> std::fmt::Debug for NoDebug<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("<skipped>")
+    }
+}
+
+/// Represents a function argument (a "tusk")
 #[derive(Debug)]
 pub struct Argument {
-    pub name: String, // name of the function argument
-    pub type_: String, // rust type as string (just for cli-Docu)
-    pub default: Option<String>, // default values for the argument
-    pub optional: bool, // is the argument an optional argument
-    pub flag: bool, // is the argument a flag (bool type)
-    pub value: Option<String>, // The actual value if already set
+    pub name: String,                  // name of the argument
+    pub type_: String,                 // Rust type as string, used for value_parser
+    pub default: Option<String>,       // default value
+    pub optional: bool,                // is Option<T>?
+    pub flag: bool,                    // is a boolean flag?
+    pub positional: bool,              // positional argument
+    pub count: Option<ArgumentMultiplicity>, // multiplicity (num_args)
+    pub short: Option<char>,           // short name, e.g., '-f'
+    pub help: Option<String>,          // help text
+    pub hidden: bool,                  // hidden from help
+    pub value_hint: Option<ValueHintWrapper>, // autocomplete hints
+    pub arg_enum: Option<Vec<String>>, // possible enum values
+    pub validator: Option<String>,     // path to validator function
+    pub arg: Option<NoDebug<FnArg>>,
 }

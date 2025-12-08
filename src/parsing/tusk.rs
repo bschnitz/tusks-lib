@@ -1,5 +1,5 @@
 use crate::models::{Argument, Tusk};
-use crate::parsing::types::DefaultArguments;
+use crate::parsing::attributes::TuskFunctionAttributes;
 use indexmap::IndexMap;
 use syn::{Error, ItemFn};
 
@@ -8,21 +8,16 @@ impl Tusk {
         let name = func.sig.ident.to_string();
         let mut arguments = IndexMap::new();
 
-        // Extract defaults with span information
-        let defaults = DefaultArguments::from_func(func)?;
-
-        // Convert to the format expected by Argument::from_fn_arg
-        let defaults_map = defaults.to_value_map();
+        let attributes = TuskFunctionAttributes::from_func(func)?;
 
         // Parse all function arguments
         for input in &func.sig.inputs {
-            if let Some(argument) = Argument::from_fn_arg(input, &defaults_map)? {
+            if let Some(argument) = Argument::from_fn_arg(input)? {
                 arguments.insert(argument.name.clone(), argument);
             }
         }
 
-        defaults.validate_against_arguments(&arguments)?;
-        defaults.validate_no_defaults_for_optional(&arguments)?;
+        attributes.add_attribute_info(&mut arguments)?;
 
         Ok(Tusk { name, arguments })
     }

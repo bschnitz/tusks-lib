@@ -1,9 +1,10 @@
 [package]
 name = "tusks-lib"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2024"
 
 [dependencies]
+clap = { version = "4.5.53", features = ["string"] }
 indexmap = "2.12.1"
 proc-macro2 = "1.0.103"
 quote = "1.0.42"

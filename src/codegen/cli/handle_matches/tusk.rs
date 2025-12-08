@@ -18,7 +18,8 @@ impl Tusk {
         let command_name = path_to_tusk.join(ctx.path_sep);
 
         let mirror_path = std::iter::empty()
-            .chain(["mirror_module"])
+            .chain(["super"])
+            //.chain(["mirror_module"])
             .chain(path_to_tusk);
 
         // build mirror_module::path::to::tusk
