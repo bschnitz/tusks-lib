@@ -4,6 +4,7 @@ use std::ops::{Deref, DerefMut};
 // Repeat<T, N> - Vec mit Typ-Level Zahl (keine Runtime-Prüfung)
 // ============================================================================
 
+#[derive(Debug)]
 pub struct Repeat<T, const N: usize>(Vec<T>);
 
 impl<T, const N: usize> Repeat<T, N> {
@@ -40,6 +41,7 @@ impl<T, const N: usize> From<Vec<T>> for Repeat<T, N> {
 // RepeatMin<T, MIN> - Vec mit Mindestlänge (keine Runtime-Prüfung)
 // ============================================================================
 
+#[derive(Debug)]
 pub struct RepeatMin<T, const MIN: usize>(Vec<T>);
 
 impl<T, const MIN: usize> RepeatMin<T, MIN> {
@@ -75,6 +77,7 @@ impl<T, const MIN: usize> From<Vec<T>> for RepeatMin<T, MIN> {
 // RepeatMax<T, MAX> - Vec mit Maximallänge (keine Runtime-Prüfung)
 // ============================================================================
 
+#[derive(Debug)]
 pub struct RepeatMax<T, const MAX: usize>(Vec<T>);
 
 impl<T, const MAX: usize> RepeatMax<T, MAX> {
@@ -110,6 +113,7 @@ impl<T, const MAX: usize> From<Vec<T>> for RepeatMax<T, MAX> {
 // RepeatMinMax<T, MIN, MAX> - Vec mit Min/Max Länge (keine Runtime-Prüfung)
 // ============================================================================
 
+#[derive(Debug)]
 pub struct RepeatMinMax<T, const MIN: usize, const MAX: usize>(Vec<T>);
 
 impl<T, const MIN: usize, const MAX: usize> RepeatMinMax<T, MIN, MAX> {
