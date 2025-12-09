@@ -47,15 +47,36 @@ impl Argument {
 
             // Multiplicity / num_args
             if let Some(m) = &self.count {
-                let min = m.min.unwrap_or(1) as usize;
-                let max_tokens = match m.max {
-                    Some(v) => quote! { Some(#v as usize) },
-                    None => quote! { None },
-                };
-                arg_config = quote! {
-                    #arg_config
-                        .num_args(#min..#max_tokens)
-                };
+                match (m.min, m.max) {
+                    (Some(min), Some(max)) => {
+                        let min_lit = proc_macro2::Literal::usize_unsuffixed(min);
+                        let max_lit = proc_macro2::Literal::usize_unsuffixed(max);
+                        arg_config = quote! {
+                            #arg_config
+                                .num_args(#min_lit..=#max_lit)
+                        };
+                    }
+                    (None, Some(max)) => {
+                        let max_lit = proc_macro2::Literal::usize_unsuffixed(max);
+                        arg_config = quote! {
+                            #arg_config
+                                .num_args(..=#max_lit)
+                        };
+                    }
+                    (Some(min), None) => {
+                        let min_lit = proc_macro2::Literal::usize_unsuffixed(min);
+                        arg_config = quote! {
+                            #arg_config
+                                .num_args(#min_lit..)
+                        };
+                    }
+                    (None, None) => {
+                        arg_config = quote! {
+                            #arg_config
+                                .num_args(..)
+                        };
+                    }
+                }
             }
 
             // Enum possibilities

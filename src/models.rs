@@ -42,8 +42,8 @@ pub struct ValueHintWrapper(pub ValueHint);
 /// Represents how often an argument can appear
 #[derive(Debug)]
 pub struct ArgumentMultiplicity {
-    pub min: Option<u8>, // minimal number of values
-    pub max: Option<u8>, // maximal number of values
+    pub min: Option<usize>, // minimal number of values
+    pub max: Option<usize>, // maximal number of values
 }
 
 pub struct NoDebug<T>(pub T);

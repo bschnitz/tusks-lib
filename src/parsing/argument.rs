@@ -1,6 +1,6 @@
-use crate::models::{Argument, NoDebug};
+use crate::models::{Argument, ArgumentMultiplicity, NoDebug};
 use quote::quote;
-use syn::{Error, FnArg};
+use syn::{Error, FnArg, GenericArgument, PathArguments, Type, TypePath};
 
 impl Argument {
     /// Create an Argument from a function argument (FnArg).
@@ -28,22 +28,13 @@ impl Argument {
             }
         };
 
-        // Analyze type structure
-        let (optional, inner_type) = Self::extract_option_inner(&pat_type.ty);
-
-        // Use inner type if optional, otherwise the full type
-        let type_display = quote!(#inner_type).to_string().replace(" ", "");
-
-        let flag = type_display == "bool" && !optional;
-
-        Ok(Some(Argument {
+        let mut argument = Argument {
             name: arg_name,
-            type_: type_display,
+            type_: "".to_string(),
             default: None,
-            optional,
-            flag,
+            optional: false,
+            flag: false,
             positional: false,
-
             count: None,
             short: None,
             help: None,
@@ -52,33 +43,154 @@ impl Argument {
             arg_enum: None,
             validator: None,
             arg: Some(NoDebug(arg.clone()))
-        }))
+        };
+
+        argument.parse_type(&pat_type.ty)?;
+
+        Ok(Some(argument))
     }
 
-    /// Extract the inner type from Option<T>, returns (is_option, inner_type)
-    /// If it's not Option<T>, ty will be returned as it is
-    fn extract_option_inner(ty: &syn::Type) -> (bool, &syn::Type) {
-        if let syn::Type::Path(type_path) = ty {
-            // Check if this is a simple path (no self, no leading ::)
-            if type_path.qself.is_none() && type_path.path.segments.len() == 1 {
-                let segment = &type_path.path.segments[0];
+    /// Main function: Parses the type and fills the Argument structure
+    pub fn parse_type(&mut self, ty: &syn::Type) -> syn::Result<()> {
+        let mut current_type = ty;
 
-                // Check if the type name is "Option"
-                if segment.ident == "Option" ||
-                (type_path.path.segments.len() >= 2 &&
-                type_path.path.segments.last().unwrap().ident == "Option") {
-                    // Check for angle bracketed generic arguments
-                    if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
-                        // Get the first generic argument
-                        if let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first() {
-                            return (true, inner_ty);
-                        }
+        // Step 1: Unwrap Option<T>
+        if let Some(inner) = extract_option_inner(current_type) {
+            self.optional = true;
+            current_type = inner;
+        }
+
+        // Step 2: Handle Vec/Repeat*
+        if let Some((inner, multiplicity)) = extract_collection_inner(current_type)? {
+            self.count = Some(multiplicity);
+            current_type = inner;
+        }
+
+        // Step 3: Check final type
+        if is_bool_type(current_type) {
+            // bool is only allowed as a simple flag
+            if self.optional || self.count.is_some() {
+                return Err(syn::Error::new_spanned(
+                    ty,
+                    "bool type can only be used for simple flags (not with Option or multiplicity)"
+                ));
+            }
+            self.flag = true;
+            self.type_ = "bool".to_string();
+        } else {
+            // Convert type to string
+            self.type_ = quote!(#current_type).to_string().trim().to_string();
+        }
+
+        Ok(())
+    }
+}
+
+
+/// Extracts the inner type from Option<T>
+fn extract_option_inner(ty: &Type) -> Option<&Type> {
+    if let Type::Path(TypePath { path, .. }) = ty {
+        if let Some(segment) = path.segments.last() {
+            if segment.ident == "Option" {
+                if let PathArguments::AngleBracketed(args) = &segment.arguments {
+                    if let Some(GenericArgument::Type(inner)) = args.args.first() {
+                        return Some(inner);
                     }
                 }
             }
         }
-
-        // Not an Option, return the original type
-        (false, ty)
     }
+    None
+}
+
+/// Extracts the inner type and multiplicity from Vec/Repeat*
+fn extract_collection_inner(ty: &Type) -> syn::Result<Option<(&Type, ArgumentMultiplicity)>> {
+    if let Type::Path(TypePath { path, .. }) = ty {
+        if let Some(segment) = path.segments.last() {
+            let type_name = segment.ident.to_string();
+
+            if let PathArguments::AngleBracketed(args) = &segment.arguments {
+                let args_vec: Vec<_> = args.args.iter().collect();
+
+                // Extract inner type T (always the first argument)
+                let inner_type = if let Some(GenericArgument::Type(inner)) = args_vec.first() {
+                    inner
+                } else {
+                    return Ok(None);
+                };
+
+                // Check for Vec, Repeat, RepeatMin, RepeatMax, RepeatMinMax
+                let multiplicity = match type_name.as_str() {
+                    "Vec" => ArgumentMultiplicity { min: None, max: None },
+                    "Repeat" => {
+                        // Repeat<T, N> - exactly N times
+                        let n = if let Some(arg) = args_vec.get(1) {
+                            extract_const_usize(arg)?
+                        } else {
+                            None
+                        };
+                        ArgumentMultiplicity { min: n, max: n }
+                    },
+                    "RepeatMin" => {
+                        // RepeatMin<T, MIN>
+                        let min = if let Some(arg) = args_vec.get(1) {
+                            extract_const_usize(arg)?
+                        } else {
+                            None
+                        };
+                        ArgumentMultiplicity { min, max: None }
+                    },
+                    "RepeatMax" => {
+                        // RepeatMax<T, MAX>
+                        let max = if let Some(arg) = args_vec.get(1) {
+                            extract_const_usize(arg)?
+                        } else {
+                            None
+                        };
+                        ArgumentMultiplicity { min: None, max }
+                    },
+                    "RepeatMinMax" => {
+                        // RepeatMinMax<T, MIN, MAX>
+                        let min = if let Some(arg) = args_vec.get(1) {
+                            extract_const_usize(arg)?
+                        } else {
+                            None
+                        };
+                        let max = if let Some(arg) = args_vec.get(2) {
+                            extract_const_usize(arg)?
+                        } else {
+                            None
+                        };
+                        ArgumentMultiplicity { min, max }
+                    },
+                    _ => return Ok(None),
+                };
+
+                return Ok(Some((inner_type, multiplicity)));
+            }
+        }
+    }
+    Ok(None)
+}
+
+/// Extracts a usize value from a const generic argument
+fn extract_const_usize(arg: &GenericArgument) -> syn::Result<Option<usize>> {
+    if let GenericArgument::Const(expr) = arg {
+        if let syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Int(lit_int), .. }) = expr {
+            return Ok(Some(lit_int.base10_parse::<usize>()?));
+        }
+    }
+    Ok(None)
+}
+
+/// Checks if the type is `bool`
+fn is_bool_type(ty: &Type) -> bool {
+    if let Type::Path(TypePath { path, .. }) = ty {
+        if path.segments.len() == 1 {
+            if let Some(segment) = path.segments.first() {
+                return segment.ident == "bool";
+            }
+        }
+    }
+    false
 }

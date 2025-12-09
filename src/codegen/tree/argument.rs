@@ -36,8 +36,14 @@ impl Argument {
 
         let count = match &self.count {
             Some(c) => {
-                let min = c.min.map(|v| quote! { Some(#v) }).unwrap_or(quote! { None });
-                let max = c.max.map(|v| quote! { Some(#v) }).unwrap_or(quote! { None });
+                let min = c.min.map(|v| {
+                    let lit = proc_macro2::Literal::usize_unsuffixed(v);
+                    quote! { Some(#lit) }
+                }).unwrap_or(quote! { None });
+                let max = c.max.map(|v| {
+                    let lit = proc_macro2::Literal::usize_unsuffixed(v);
+                    quote! { Some(#lit) }
+                }).unwrap_or(quote! { None });
                 quote! {
                     Some(tusks::ArgumentMultiplicity { min: #min, max: #max })
                 }
