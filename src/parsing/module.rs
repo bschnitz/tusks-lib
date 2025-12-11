@@ -1,4 +1,4 @@
-use crate::models::{ExternalModule, Tusk, TusksModule, TusksParameters};
+use crate::models::{Attributes, ExternalModule, Tusk, TusksModule, TusksParameters};
 use syn::spanned::Spanned;
 use crate::parsing::util::attr::AttributeCheck;
 
@@ -35,6 +35,7 @@ impl TusksModule {
         
         let mut tusks_module = TusksModule {
             name,
+            attrs: Attributes(module.attrs),
             external_parent: None,
             parameters: None,
             tusks: Vec::new(),
@@ -101,7 +102,7 @@ impl TusksModule {
                     // Only consider pub use
                     if matches!(item_use.vis, syn::Visibility::Public(_)) {
                         // Extract external modules
-                        self.extract_external_modules(&item_use.tree, item_use.span(), is_root);
+                        self.extract_external_modules(&item_use.tree, &item_use, is_root);
                     }
                 }
                 
@@ -121,55 +122,55 @@ impl TusksModule {
         Ok(())
     }
     
-    /// Extract external module names from a use tree
-    fn extract_external_modules(
-        &mut self,
-        tree: &syn::UseTree,
-        span: proc_macro2::Span,
-        is_root: bool
-    ) {
-        match tree {
-            syn::UseTree::Path(use_path) => {
-                // use foo::<rest>
-                self.extract_external_modules(&use_path.tree, span, is_root);
+/// Extract external module names from a use tree
+fn extract_external_modules(
+    &mut self,
+    tree: &syn::UseTree,
+    item_use: &syn::ItemUse,
+    is_root: bool
+) {
+    match tree {
+        syn::UseTree::Path(use_path) => {
+            // use foo::<rest>
+            self.extract_external_modules(&use_path.tree, item_use, is_root);
+        }
+        syn::UseTree::Name(use_name) => {
+            // Check if it's parent_
+            if use_name.ident == "parent_" && is_root {
+                self.external_parent = Some(ExternalModule {
+                    alias: use_name.ident.clone(),
+                    item_use: item_use.clone(),
+                });
+            } else {
+                self.external_modules.push(ExternalModule {
+                    alias: use_name.ident.clone(),
+                    item_use: item_use.clone(),
+                });
             }
-            syn::UseTree::Name(use_name) => {
-                // Check if it's parent_
-                if use_name.ident == "parent_" && is_root {
-                    self.external_parent = Some(ExternalModule {
-                        alias: use_name.ident.clone(),
-                        span,
-                    });
-                } else {
-                    self.external_modules.push(ExternalModule {
-                        alias: use_name.ident.clone(),
-                        span,
-                    });
-                }
+        }
+        syn::UseTree::Rename(use_rename) => {
+            // Check if this is the reference to the parent module
+            if use_rename.rename == "parent_" {
+                self.external_parent = Some(ExternalModule {
+                    alias: use_rename.rename.clone(),
+                    item_use: item_use.clone(),
+                });
+            } else {
+                self.external_modules.push(ExternalModule {
+                    alias: use_rename.rename.clone(),
+                    item_use: item_use.clone(),
+                });
             }
-            syn::UseTree::Rename(use_rename) => {
-                // Check if this is the reference to the parent module
-                if use_rename.rename == "parent_" {
-                    self.external_parent = Some(ExternalModule {
-                        alias: use_rename.rename.clone(),
-                        span,
-                    });
-                } else {
-                    self.external_modules.push(ExternalModule {
-                        alias: use_rename.rename.clone(),
-                        span,
-                    });
-                }
-            }
-            syn::UseTree::Glob(_) => {
-                // use foo::* => ignore
-            }
-            syn::UseTree::Group(use_group) => {
-                // e.g. use foo::{bar, baz};
-                for item in &use_group.items {
-                    self.extract_external_modules(item, span, is_root);
-                }
+        }
+        syn::UseTree::Glob(_) => {
+            // use foo::* => ignore
+        }
+        syn::UseTree::Group(use_group) => {
+            // e.g. use foo::{bar, baz};
+            for item in &use_group.items {
+                self.extract_external_modules(item, item_use, is_root);
             }
         }
     }
+}
 }

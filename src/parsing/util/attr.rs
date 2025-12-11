@@ -1,4 +1,4 @@
-use syn::{ItemFn, Field, FnArg, ItemStruct, ItemMod, Attribute};
+use syn::{Attribute, Field, FnArg, ItemFn, ItemMod, ItemStruct, ItemUse};
 
 /// Helper trait for all syn nodes that expose `attrs: Vec<Attribute>`
 pub trait HasAttributes {
@@ -56,6 +56,12 @@ impl HasAttributes for ItemStruct {
 }
 
 impl HasAttributes for ItemMod {
+    fn attrs(&self) -> &[Attribute] {
+        &self.attrs
+    }
+}
+
+impl HasAttributes for ItemUse {
     fn attrs(&self) -> &[Attribute] {
         &self.attrs
     }

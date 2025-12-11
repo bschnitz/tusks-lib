@@ -1,10 +1,15 @@
-use syn::{ItemStruct, ItemFn, Ident};
+use syn::{Attribute, Ident, ItemFn, ItemStruct, PathSegment, spanned::Spanned};
+
+#[derive(Default)]
+pub struct Attributes(pub Vec<Attribute>);
 
 /// Represents a tusks module with all its elements
 #[derive(Debug)]
 pub struct TusksModule {
     /// Name of the module (e.g. "tasks", "sub1")
     pub name: Ident,
+
+    pub attrs: Attributes,
 
     /// The parent annotated as pub use ... as parent_
     pub external_parent: Option<ExternalModule>,
@@ -39,8 +44,8 @@ pub struct ExternalModule {
     /// The alias name (e.g. "sub2")
     pub alias: Ident,
     
-    /// Span for error messages
-    pub span: proc_macro2::Span,
+    /// The original pub use statement that created this external module
+    pub item_use: syn::ItemUse,
 }
 
 impl std::fmt::Debug for TusksParameters {
@@ -63,6 +68,29 @@ impl std::fmt::Debug for ExternalModule {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ExternalModule")
             .field("alias", &self.alias.to_string())
+            .field("item_use", &format!("ItemUse at span: {:?}", self.item_use.span()))
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for Attributes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Attributes")
+            .field("count", &self.0.len())
+            .field(
+                "attributes",
+                &self.0.iter().map(|attr| {
+                    let path_str = attr
+                        .path()
+                        .segments
+                        .iter()
+                        .map(|seg: &PathSegment| seg.ident.to_string())
+                        .collect::<Vec<_>>()
+                        .join("::");
+
+                    format!("{} at span: {:?}", path_str, attr.span())
+                }).collect::<Vec<String>>(),
+            )
             .finish()
     }
 }

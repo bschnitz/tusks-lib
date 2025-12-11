@@ -51,9 +51,6 @@ impl TusksModule{
     
     /// Generate the root Cli struct
     fn build_cli_struct(&self, debug: bool) -> TokenStream {
-        let module_name = &self.name;
-        let module_name_str = module_name.to_string();
-        
         // Extract fields from parameters struct
         let fields = if let Some(ref params) = self.parameters {
             self.build_cli_fields_from_parameters(params)
@@ -63,8 +60,9 @@ impl TusksModule{
         
         // Add subcommand field if we have commands
         let subcommand_field = if !self.tusks.is_empty() || !self.external_modules.is_empty() {
+            let subcommand_attr = self.generate_command_attribute_for_subcommands();
             quote! {
-                #[command(subcommand)]
+                #subcommand_attr
                 pub sub: Option<Commands>,
             }
         } else {
@@ -77,9 +75,11 @@ impl TusksModule{
             quote! { #[derive(::tusks::clap::Parser)] }
         };
         
+        let command_attr = self.generate_command_attribute();
+        
         quote! {
             #derive_attr
-            #[command(name = #module_name_str)]
+            #command_attr
             pub struct Cli {
                 #fields
                 #subcommand_field
@@ -130,13 +130,11 @@ impl TusksModule{
     /// Generate the ExternalCommands enum
     fn build_external_commands_enum(&self, path: &Vec<&Ident>, debug: bool) -> TokenStream {
         let variants: Vec<_> = self.external_modules.iter().map(|ext_mod| {
-            let alias = &ext_mod.alias;
-            let alias_str = alias.to_string();
-            let variant_ident = convert_external_module_to_enum_variant(alias);
+            let variant_ident = convert_external_module_to_enum_variant(&ext_mod.alias);
 
             // Anzahl super:: Prefixe: path.len() + 2
             let mut full_path: Vec<syn::Ident> = (0..path.len() + 2)
-                .map(|_| syn::Ident::new("super", alias.span()))
+                .map(|_| syn::Ident::new("super", ext_mod.alias.span()))
                 .collect();
 
             // Originalpfad anhängen
@@ -145,10 +143,12 @@ impl TusksModule{
             }
 
             // Alias anhängen
-            full_path.push(alias.clone());
+            full_path.push(ext_mod.alias.clone());
 
+            let command_attr = ext_mod.generate_command_attribute();
+            
             quote! {
-                #[command(name = #alias_str)]
+                #command_attr
                 #[allow(non_camel_case_types)]
                 #variant_ident(
                     #(#full_path)::*::__internal_tusks_module::cli::Cli
@@ -184,10 +184,10 @@ impl TusksModule{
             variants.push(self.build_command_variant_from_submodule(submodule));
         }
         
-        // Add flatten for external commands if needed
         if !self.external_modules.is_empty() {
+            let attr = self.generate_command_attribute_for_external_subcommands();
             variants.push(quote! {
-                #[command(flatten)]
+                #attr
                 TuskExternalCommands(ExternalCommands),
             });
         }
@@ -209,14 +209,15 @@ impl TusksModule{
     /// Build a command variant from a Tusk (command function)
     fn build_command_variant_from_tusk(&self, tusk: &Tusk) -> TokenStream {
         let func_name = &tusk.func.sig.ident;
-        let func_name_str = func_name.to_string();
         let variant_ident = convert_function_to_enum_variant(func_name);
 
         // Extract fields from function parameters (skip first parameter which is &Parameters)
         let fields = self.build_fields_from_tusk_params(tusk);
 
+        let command_attr = tusk.generate_command_attribute();
+        
         quote! {
-            #[command(name = #func_name_str)]
+            #command_attr
             #[allow(non_camel_case_types)]
             #variant_ident {
                 #fields
@@ -298,7 +299,6 @@ impl TusksModule{
     /// Build a command variant from a submodule
     fn build_command_variant_from_submodule(&self, submodule: &TusksModule) -> TokenStream {
         let submod_name = &submodule.name;
-        let submod_name_str = submod_name.to_string();
         let variant_ident = convert_submodule_to_enum_variant(submod_name);
 
         // Extract fields from submodule's parameters
@@ -310,16 +310,19 @@ impl TusksModule{
 
         // Add subcommand field if submodule has commands
         let subcommand_field = if !submodule.tusks.is_empty() || !submodule.external_modules.is_empty() {
+            let subcommand_attr = submodule.generate_command_attribute_for_subcommands();
             quote! {
-                #[command(subcommand)]
+                #subcommand_attr
                 sub: Option<#submod_name::Commands>,
             }
         } else {
             quote! {}
         };
 
+        let command_attr = submodule.generate_command_attribute();
+        
         quote! {
-            #[command(name = #submod_name_str)]
+            #command_attr
             #[allow(non_camel_case_types)]
             #variant_ident {
                 #fields

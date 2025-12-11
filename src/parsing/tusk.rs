@@ -1,11 +1,12 @@
 use syn::ItemFn;
+use crate::parsing::util::attr::AttributeCheck;
 
 use crate::models::Tusk;
 
 impl Tusk {
     pub fn from_fn(item_fn: ItemFn) -> syn::Result<Option<Self>> {
         // Only consider pub functions
-        if !matches!(item_fn.vis, syn::Visibility::Public(_)) {
+        if !matches!(item_fn.vis, syn::Visibility::Public(_)) || item_fn.has_attr("skip") {
             return Ok(None);
         }
         
