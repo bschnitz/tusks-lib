@@ -149,6 +149,7 @@ impl TusksModule{
 
             quote! {
                 #[command(name = #alias_str)]
+                #[allow(non_camel_case_types)]
                 #variant_ident(
                     #(#full_path)::*::__internal_tusks_module::cli::Cli
                 ),
@@ -216,6 +217,7 @@ impl TusksModule{
 
         quote! {
             #[command(name = #func_name_str)]
+            #[allow(non_camel_case_types)]
             #variant_ident {
                 #fields
             },
@@ -318,6 +320,7 @@ impl TusksModule{
 
         quote! {
             #[command(name = #submod_name_str)]
+            #[allow(non_camel_case_types)]
             #variant_ident {
                 #fields
                 #subcommand_field

@@ -85,7 +85,7 @@ impl TusksModule {
     /// ```rust
     /// ["arg1: p1", "arg2: p2"]
     /// ```
-    fn build_pattern_fields(&self, pattern_bindings: &[(syn::Ident, syn::Ident)]) -> Vec<TokenStream> {
+    pub fn build_pattern_fields(&self, pattern_bindings: &[(syn::Ident, syn::Ident)]) -> Vec<TokenStream> {
         pattern_bindings.iter()
             .map(|(field_name, binding_name)| {
                 quote! { #field_name: #binding_name }
