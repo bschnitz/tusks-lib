@@ -10,11 +10,14 @@ impl TusksModule {
     pub fn build_handle_matches(&self, is_tusks_root: bool) -> TokenStream {
         let signature = if is_tusks_root {
             quote! {
-                pub fn handle_matches(cli: &cli::Cli)
+                pub fn handle_matches(cli: &cli::Cli) -> Option<u8>
             }
         } else {
             quote! {
-                pub fn handle_matches(cli: &cli::Cli, super_parameters: &super::parent_::Parameters)
+                pub fn handle_matches(
+                    cli: &cli::Cli,
+                    super_parameters: &super::parent_::Parameters
+                ) -> Option<u8>
             }
         };
         
@@ -29,9 +32,7 @@ impl TusksModule {
                 match commands {
                     #(#match_arms)*
                     
-                    None => {
-                        println!("No function defined for this command!");
-                    }
+                    None => { None }
                 }
             }
         }
@@ -116,7 +117,7 @@ impl TusksModule {
 
             external_arms.push(quote! {
                 #cli_path::ExternalCommands::#variant_ident(cli) => {
-                    #external_path::__internal_tusks_module::handle_matches(cli, &parameters);
+                    #external_path::__internal_tusks_module::handle_matches(cli, &parameters)
                 }
             });
         }

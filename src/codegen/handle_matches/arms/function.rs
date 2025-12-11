@@ -34,12 +34,41 @@ impl TusksModule {
         let variant_ident = convert_function_to_enum_variant(&tusk.func.sig.ident);
         let pattern_bindings = self.build_pattern_bindings(tusk);
         let pattern_fields = self.build_pattern_fields(&pattern_bindings);
-        let func_args = self.build_function_arguments(tusk, &pattern_bindings);
-        let func_path = self.build_function_path(tusk, path);
+        let function_call = self.build_function_call(tusk, &pattern_bindings, path);
 
         quote! {
             Some(#cli_path::Commands::#variant_ident { #(#pattern_fields),* }) => {
-                #func_path(#(#func_args),*);
+                #function_call
+            }
+        }
+    }
+
+    /// Creates the function call with proper arguments and path, always returning Option<i32>
+    fn build_function_call(
+        &self,
+        tusk: &Tusk,
+        pattern_bindings: &[(syn::Ident, syn::Ident)],
+        path: &[&str]
+    ) -> TokenStream {
+        let func_args = self.build_function_arguments(tusk, pattern_bindings);
+        let func_path = self.build_function_path(tusk, path);
+        
+        match &tusk.func.sig.output {
+            syn::ReturnType::Default => {
+                // Function returns () - call it and return None
+                quote! { #func_path(#(#func_args),*); None }
+            }
+            syn::ReturnType::Type(_, ty) => {
+                if Tusk::is_u8_type(ty) {
+                    // Function returns u8 - call it and wrap in Some
+                    quote! { Some(#func_path(#(#func_args),*)) }
+                } else if Tusk::is_option_u8_type(ty) {
+                    // Function returns Option<u8> - call it and return as is
+                    quote! { #func_path(#(#func_args),*) }
+                } else {
+                    // This should not happen due to validation
+                    quote! { None }
+                }
             }
         }
     }

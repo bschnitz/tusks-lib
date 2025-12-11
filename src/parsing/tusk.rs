@@ -10,7 +10,7 @@ impl Tusk {
             return Ok(None);
         }
         
-        // Validate return type is either nothing or an integer type
+        // Validate return type is either nothing, i32, or Option<i32>
         Self::validate_return_type(&item_fn.sig.output)?;
         
         Ok(Some(Tusk {
@@ -18,7 +18,7 @@ impl Tusk {
         }))
     }
     
-    /// Validate that the return type is either nothing or an integer type
+    /// Validate that the return type is either nothing, u8, or Option<u8>
     fn validate_return_type(output: &syn::ReturnType) -> syn::Result<()> {
         match output {
             syn::ReturnType::Default => {
@@ -26,33 +26,47 @@ impl Tusk {
                 Ok(())
             }
             syn::ReturnType::Type(_, ty) => {
-                // Check if it's an integer type
-                if !Self::is_integer_type(ty) {
-                    return Err(syn::Error::new_spanned(
+                // Check if it's u8 or Option<u8>
+                if Self::is_u8_type(ty) || Self::is_option_u8_type(ty) {
+                    Ok(())
+                } else {
+                    Err(syn::Error::new_spanned(
                         ty,
-                        "command function must return nothing or an integer type (e.g., i32, u32, etc.)"
-                    ));
+                        "command function must return (), u8, or Option<u8>"
+                    ))
                 }
-                Ok(())
             }
         }
     }
-    
-    /// Check if a type is an integer type
-    fn is_integer_type(ty: &syn::Type) -> bool {
+
+    /// Check if a type is u8
+    pub fn is_u8_type(ty: &syn::Type) -> bool {
         if let syn::Type::Path(type_path) = ty {
             if let Some(segment) = type_path.path.segments.last() {
-                let ident = &segment.ident;
-                matches!(
-                    ident.to_string().as_str(),
-                    "i8" | "i16" | "i32" | "i64" | "i128" | "isize" |
-                    "u8" | "u16" | "u32" | "u64" | "u128" | "usize"
-                )
+                segment.ident == "u8"
             } else {
                 false
             }
         } else {
             false
         }
+    }
+
+    /// Check if a type is Option<u8>
+    pub fn is_option_u8_type(ty: &syn::Type) -> bool {
+        if let syn::Type::Path(type_path) = ty {
+            if let Some(segment) = type_path.path.segments.last() {
+                if segment.ident == "Option" {
+                    if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
+                        if let Some(first_arg) = args.args.first() {
+                            if let syn::GenericArgument::Type(inner_ty) = first_arg {
+                                return Self::is_u8_type(inner_ty);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        false
     }
 }

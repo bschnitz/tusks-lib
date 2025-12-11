@@ -178,7 +178,7 @@ impl TusksModule {
         has_commands: bool,
     ) -> TokenStream {
         if !has_commands {
-            return quote! {};
+            return quote! { None };
         }
 
         let mut new_path = path.to_vec();
@@ -191,9 +191,7 @@ impl TusksModule {
             match sub {
                 #(#nested_arms)*
 
-                None => {
-                    println!("No function defined for this command!");
-                }
+                None => { None }
             }
         }
     }
