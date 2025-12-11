@@ -1,6 +1,8 @@
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 
+use crate::codegen::util::enum_util::convert_function_to_enum_variant;
+
 use crate::{TusksModule, models::Tusk};
 
 impl TusksModule {
@@ -29,7 +31,7 @@ impl TusksModule {
         cli_path: &TokenStream,
         path: &[&str]
     ) -> TokenStream {
-        let variant_ident = self.create_variant_ident(tusk);
+        let variant_ident = convert_function_to_enum_variant(&tusk.func.sig.ident);
         let pattern_bindings = self.build_pattern_bindings(tusk);
         let pattern_fields = self.build_pattern_fields(&pattern_bindings);
         let func_args = self.build_function_arguments(tusk, &pattern_bindings);
@@ -40,18 +42,6 @@ impl TusksModule {
                 #func_path(#(#func_args),*);
             }
         }
-    }
-
-    /// Creates a PascalCase identifier from the function name.
-    /// 
-    /// # Examples
-    /// 
-    /// - "my_function" → "MyFunction"
-    /// - "process_data" → "ProcessData"
-    fn create_variant_ident(&self, tusk: &Tusk) -> syn::Ident {
-        let func_name = &tusk.func.sig.ident;
-        let variant_name = Self::to_pascal_case(&func_name.to_string());
-        syn::Ident::new(&variant_name, func_name.span())
     }
 
     /// Creates bindings for function parameters (p1, p2, p3, ...).

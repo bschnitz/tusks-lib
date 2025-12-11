@@ -1,6 +1,8 @@
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 
+use crate::codegen::util::enum_util::{convert_submodule_to_enum_variant, convert_external_module_to_enum_variant};
+
 use crate::{TusksModule, models::Tusk};
 
 impl TusksModule {
@@ -94,8 +96,7 @@ impl TusksModule {
     fn build_submodule_arm(&self, submodule: &TusksModule, cli_path: &TokenStream, path: &[&str]) -> TokenStream {
         let submod_name = &submodule.name;
         let submod_name_str = submod_name.to_string();
-        let variant_name = Self::to_pascal_case(&submod_name_str);
-        let variant_ident = syn::Ident::new(&variant_name, submod_name.span());
+        let variant_ident = convert_submodule_to_enum_variant(submod_name);
 
         // Build pattern bindings for submodule parameters
         let mut pattern_bindings = Vec::new();
@@ -202,8 +203,7 @@ impl TusksModule {
 
         for ext_mod in &self.external_modules {
             let alias = &ext_mod.alias;
-            let variant_name = Self::to_pascal_case(&alias.to_string());
-            let variant_ident = syn::Ident::new(&variant_name, alias.span());
+            let variant_ident = convert_external_module_to_enum_variant(alias);
 
             // Build the correct path to the external module's handle_matches
             // If we're at root: super::#alias

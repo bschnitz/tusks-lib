@@ -2,6 +2,12 @@ use quote::quote;
 use proc_macro2::TokenStream;
 use syn::Ident;
 
+use crate::codegen::util::enum_util::{
+    convert_external_module_to_enum_variant,
+    convert_function_to_enum_variant,
+    convert_submodule_to_enum_variant
+};
+
 use crate::{TusksModule, models::{Tusk, TusksParameters}};
 
 impl TusksModule{
@@ -126,8 +132,7 @@ impl TusksModule{
         let variants: Vec<_> = self.external_modules.iter().map(|ext_mod| {
             let alias = &ext_mod.alias;
             let alias_str = alias.to_string();
-            let variant_name = Self::to_pascal_case(&alias_str);
-            let variant_ident = syn::Ident::new(&variant_name, alias.span());
+            let variant_ident = convert_external_module_to_enum_variant(alias);
 
             // Anzahl super:: Prefixe: path.len() + 2
             let mut full_path: Vec<syn::Ident> = (0..path.len() + 2)
@@ -204,8 +209,7 @@ impl TusksModule{
     fn build_command_variant_from_tusk(&self, tusk: &Tusk) -> TokenStream {
         let func_name = &tusk.func.sig.ident;
         let func_name_str = func_name.to_string();
-        let variant_name = Self::to_pascal_case(&func_name_str);
-        let variant_ident = syn::Ident::new(&variant_name, func_name.span());
+        let variant_ident = convert_function_to_enum_variant(func_name);
 
         // Extract fields from function parameters (skip first parameter which is &Parameters)
         let fields = self.build_fields_from_tusk_params(tusk);
@@ -293,8 +297,7 @@ impl TusksModule{
     fn build_command_variant_from_submodule(&self, submodule: &TusksModule) -> TokenStream {
         let submod_name = &submodule.name;
         let submod_name_str = submod_name.to_string();
-        let variant_name = Self::to_pascal_case(&submod_name_str);
-        let variant_ident = syn::Ident::new(&variant_name, submod_name.span());
+        let variant_ident = convert_submodule_to_enum_variant(submod_name);
 
         // Extract fields from submodule's parameters
         let fields = if let Some(ref params) = submodule.parameters {
@@ -352,16 +355,5 @@ impl TusksModule{
         }
     }
     
-    /// Convert snake_case to PascalCase
-    pub fn to_pascal_case(s: &str) -> String {
-        s.split('_')
-            .map(|word| {
-                let mut chars = word.chars();
-                match chars.next() {
-                    None => String::new(),
-                    Some(first) => first.to_uppercase().chain(chars).collect(),
-                }
-            })
-            .collect()
-    }
+    
 }
