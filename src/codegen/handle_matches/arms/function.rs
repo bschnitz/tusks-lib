@@ -1,6 +1,7 @@
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 
+use crate::AttributeCheck;
 use crate::codegen::util::enum_util::convert_function_to_enum_variant;
 
 use crate::{TusksModule, models::Tusk};
@@ -34,7 +35,13 @@ impl TusksModule {
         let variant_ident = convert_function_to_enum_variant(&tusk.func.sig.ident);
         let pattern_bindings = self.build_pattern_bindings(tusk);
         let pattern_fields = self.build_pattern_fields(&pattern_bindings);
-        let function_call = self.build_function_call(tusk, &pattern_bindings, path);
+        let function_call = self.build_function_call(
+            tusk,
+            &pattern_bindings,
+            path,
+            false,
+            false
+        );
 
         quote! {
             Some(#cli_path::Commands::#variant_ident { #(#pattern_fields),* }) => {
@@ -43,16 +50,41 @@ impl TusksModule {
         }
     }
 
-    pub fn builde_default_function_match_arm(
+    pub fn build_default_function_match_arm(
         &self,
         tusk: &Tusk,
-        path: &[&str]
+        path: &[&str],
+        is_external_subcommand_case: bool
     ) -> TokenStream {
         let pattern_bindings = self.build_pattern_bindings(tusk);
-        let function_call = self.build_function_call(tusk, &pattern_bindings, path);
+        let function_call = self.build_function_call(
+            tusk,
+            &pattern_bindings,
+            path,
+            true,
+            is_external_subcommand_case
+        );
 
         quote! {
             None => {
+                #function_call
+            }
+        }
+    }
+
+    pub fn build_external_subcommand_match_arm(&self, tusk: &Tusk, path: &[&str]) -> TokenStream
+    {
+        let pattern_bindings = self.build_pattern_bindings(tusk);
+        let function_call = self.build_function_call(
+            tusk,
+            &pattern_bindings,
+            path,
+            false,
+            true
+        );
+
+        quote! {
+            Some(cli::Commands::ClapExternalSubcommand(external_subcommand_args)) => {
                 #function_call
             }
         }
@@ -63,9 +95,16 @@ impl TusksModule {
         &self,
         tusk: &Tusk,
         pattern_bindings: &[(syn::Ident, syn::Ident)],
-        path: &[&str]
+        path: &[&str],
+        is_default_case: bool,
+        is_external_subcommand_case: bool
     ) -> TokenStream {
-        let func_args = self.build_function_arguments(tusk, pattern_bindings);
+        let func_args = self.build_function_arguments(
+            tusk,
+            pattern_bindings,
+            is_default_case,
+            is_external_subcommand_case
+        );
         let func_path = self.build_function_path(tusk, path);
         
         match &tusk.func.sig.output {
@@ -156,13 +195,29 @@ impl TusksModule {
     fn build_function_arguments(
         &self,
         tusk: &Tusk,
-        pattern_bindings: &[(syn::Ident, syn::Ident)]
+        pattern_bindings: &[(syn::Ident, syn::Ident)],
+        is_default_case: bool,
+        is_external_subcommand_case: bool
     ) -> Vec<TokenStream> {
         let has_params_arg = self.tusk_has_parameters_arg(tusk);
         let mut func_args = Vec::new();
 
+        let mut number_of_non_params_args = tusk.func.sig.inputs.len();
         if has_params_arg {
             func_args.push(quote! { &parameters });
+            number_of_non_params_args -= 1;
+        }
+
+        if is_default_case {
+            if is_external_subcommand_case {
+                func_args.push(quote! { Vec::new() });
+            }
+            return func_args;
+        }
+
+        if is_external_subcommand_case && number_of_non_params_args > 0 {
+            func_args.push(quote! { external_subcommand_args.clone() });
+            return func_args;
         }
 
         for (_, binding_name) in pattern_bindings {

@@ -196,6 +196,13 @@ impl TusksModule{
                 TuskExternalCommands(ExternalCommands),
             });
         }
+
+        if self.allow_external_subcommands {
+            variants.push(quote! {
+                #[command(external_subcommand)]
+                ClapExternalSubcommand(Vec<String>),
+            });
+        }
         
         let derive_attr = if debug {
             quote! {}

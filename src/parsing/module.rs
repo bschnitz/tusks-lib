@@ -1,4 +1,4 @@
-use crate::models::{Attributes, ExternalModule, Tusk, TusksModule, TusksParameters};
+use crate::{models::{Attributes, ExternalModule, Tusk, TusksModule, TusksParameters}, parsing::util::get_attribute_value::AttributeValue};
 use syn::spanned::Spanned;
 use crate::parsing::util::attr::AttributeCheck;
 
@@ -7,6 +7,11 @@ use syn::{ItemMod, ItemStruct};
 impl TusksModule {
     /// Parses a syn::ItemMod into a TusksModule
     pub fn from_module(module: ItemMod, is_tusks_root: bool, is_root: bool) -> syn::Result<Option<Self>> {
+        let allow_external_subcommands = module.get_attribute_bool(
+            "command",
+            "allow_external_subcommands"
+        );
+
         let name = module.ident.clone();
         let span = module.span();
 
@@ -32,7 +37,7 @@ impl TusksModule {
                 ));
             }
         };
-        
+
         let mut tusks_module = TusksModule {
             name,
             attrs: Attributes(module.attrs),
@@ -41,6 +46,7 @@ impl TusksModule {
             tusks: Vec::new(),
             submodules: Vec::new(),
             external_modules: Vec::new(),
+            allow_external_subcommands,
         };
         
         tusks_module.extract_module_items(items, is_root)?;
@@ -88,7 +94,11 @@ impl TusksModule {
                 }
 
                 syn::Item::Fn(item_fn) => {
-                    if let Some(tusk) = Tusk::from_fn(item_fn.clone(), has_default_tusk)? {
+                    if let Some(tusk) = Tusk::from_fn(
+                        item_fn.clone(),
+                        has_default_tusk,
+                        self.allow_external_subcommands
+                    )? {
                         has_default_tusk = has_default_tusk || tusk.is_default;
                         self.tusks.push(tusk);
                     }

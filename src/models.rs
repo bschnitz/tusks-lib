@@ -25,6 +25,9 @@ pub struct TusksModule {
     
     /// List of all external modules (pub use ... as ...)
     pub external_modules: Vec<ExternalModule>,
+
+    /// if #[command(allow_external_subcommands=true)] is set
+    pub allow_external_subcommands: bool,
 }
 
 /// Represents a parameters struct

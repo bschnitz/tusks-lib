@@ -87,7 +87,14 @@ impl TusksModule {
         let has_default_match_arm = false;
         for tusk in &self.tusks {
             if tusk.func.has_attr("default") {
-                arms.push(self.builde_default_function_match_arm(tusk, path));
+                arms.push(self.build_default_function_match_arm(
+                    tusk,
+                    path,
+                    self.allow_external_subcommands
+                ));
+                if self.allow_external_subcommands {
+                    arms.push(self.build_external_subcommand_match_arm(tusk, path));
+                }
                 break;
             }
         }
