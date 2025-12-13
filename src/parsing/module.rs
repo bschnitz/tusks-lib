@@ -80,6 +80,7 @@ impl TusksModule {
     
     /// Extract all relevant items from a module
     fn extract_module_items(&mut self, items: Vec<syn::Item>, is_root: bool) -> syn::Result<()> {
+        let mut has_default_tusk = false;
         for item in items {
             match item {
                 syn::Item::Struct(item_struct) => {
@@ -87,7 +88,8 @@ impl TusksModule {
                 }
 
                 syn::Item::Fn(item_fn) => {
-                    if let Some(tusk) = Tusk::from_fn(item_fn.clone())? {
+                    if let Some(tusk) = Tusk::from_fn(item_fn.clone(), has_default_tusk)? {
+                        has_default_tusk = has_default_tusk || tusk.is_default;
                         self.tusks.push(tusk);
                     }
                 }

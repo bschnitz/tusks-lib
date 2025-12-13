@@ -1,6 +1,7 @@
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 
+use crate::AttributeCheck;
 use crate::codegen::util::enum_util::convert_external_module_to_enum_variant;
 
 use crate::{TusksModule, models::Tusk};
@@ -31,8 +32,6 @@ impl TusksModule {
                 let commands = &cli.sub;
                 match commands {
                     #(#match_arms)*
-                    
-                    None => { None }
                 }
             }
         }
@@ -82,6 +81,19 @@ impl TusksModule {
         // Arms for tusks
         for tusk in &self.tusks {
             arms.push(self.build_function_match_arm(tusk, &cli_path, path));
+        }
+
+        // Default fallback match arm for the module at the current path
+        let has_default_match_arm = false;
+        for tusk in &self.tusks {
+            if tusk.func.has_attr("default") {
+                arms.push(self.builde_default_function_match_arm(tusk, path));
+                break;
+            }
+        }
+
+        if !has_default_match_arm {
+            arms.push(quote! {None => {None}});
         }
 
         // Arms for submodules

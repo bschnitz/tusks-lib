@@ -43,6 +43,21 @@ impl TusksModule {
         }
     }
 
+    pub fn builde_default_function_match_arm(
+        &self,
+        tusk: &Tusk,
+        path: &[&str]
+    ) -> TokenStream {
+        let pattern_bindings = self.build_pattern_bindings(tusk);
+        let function_call = self.build_function_call(tusk, &pattern_bindings, path);
+
+        quote! {
+            None => {
+                #function_call
+            }
+        }
+    }
+
     /// Creates the function call with proper arguments and path, always returning Option<i32>
     fn build_function_call(
         &self,

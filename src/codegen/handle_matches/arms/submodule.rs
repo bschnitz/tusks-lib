@@ -195,8 +195,6 @@ impl TusksModule {
         quote! {
             match sub {
                 #(#nested_arms)*
-
-                None => { None }
             }
         }
     }

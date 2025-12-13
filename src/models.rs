@@ -37,6 +37,8 @@ pub struct TusksParameters {
 pub struct Tusk {
     /// The underlying function
     pub func: ItemFn,
+
+    pub is_default: bool
 }
 
 /// Represents an externally imported module

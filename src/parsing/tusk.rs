@@ -4,18 +4,62 @@ use crate::parsing::util::attr::AttributeCheck;
 use crate::models::Tusk;
 
 impl Tusk {
-    pub fn from_fn(item_fn: ItemFn) -> syn::Result<Option<Self>> {
+    pub fn from_fn(item_fn: ItemFn, default_exists: bool) -> syn::Result<Option<Self>> {
         // Only consider pub functions
         if !matches!(item_fn.vis, syn::Visibility::Public(_)) || item_fn.has_attr("skip") {
             return Ok(None);
         }
-        
+
         // Validate return type is either nothing, i32, or Option<i32>
         Self::validate_return_type(&item_fn.sig.output)?;
-        
+
+        let is_default = item_fn.has_attr("default");
+
+        if is_default {
+            Self::validate_default_function(&item_fn, default_exists)?;
+        }
+
         Ok(Some(Tusk {
             func: item_fn,
+            is_default
         }))
+    }
+
+    fn validate_default_function(item_fn: &ItemFn, default_exists: bool) -> syn::Result<()> {
+        // Check for duplicate default attribute
+        if default_exists {
+            if let Some(attr) = item_fn.attrs.iter().find(|a| a.path().is_ident("default")) {
+                return Err(syn::Error::new_spanned(
+                    attr,
+                    "only one function can be marked with #[default]"
+                ));
+            }
+        }
+
+        // Validate arguments: either no args or exactly one Parameters arg
+        match item_fn.sig.inputs.len() {
+            0 => Ok(()),
+            1 => {
+                let arg = &item_fn.sig.inputs[0];
+                if let syn::FnArg::Typed(pat_type) = arg {
+                    if let syn::Type::Path(type_path) = &*pat_type.ty {
+                        if type_path.path.is_ident("Parameters") {
+                            return Ok(());
+                        }
+                    }
+                }
+                Err(syn::Error::new_spanned(
+                    arg,
+                    "default function must have either no arguments \
+                        or exactly one argument of the Parameters type"
+                ))
+            }
+            _ => Err(syn::Error::new_spanned(
+                &item_fn.sig.inputs,
+                "default function must have either no arguments \
+                    or exactly one argument of the Parameters type"
+            ))
+        }
     }
     
     /// Validate that the return type is either nothing, u8, or Option<u8>
