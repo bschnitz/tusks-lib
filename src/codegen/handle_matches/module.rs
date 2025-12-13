@@ -44,11 +44,14 @@ impl TusksModule {
             
             for field in &params.pstruct.fields {
                 if let Some(field_name) = &field.ident {
-                    if field_name == "super_" {
-                        field_inits.push(quote! { super_: super_parameters, });
-                    } else {
-                        field_inits.push(quote! { #field_name: &cli.#field_name, });
-                    }
+                    let field_init = match field_name.to_string().as_str() {
+                        "super_" => quote! { super_: super_parameters, },
+                        "_phantom_lifetime_marker" => quote! {
+                            _phantom_lifetime_marker: ::std::marker::PhantomData,
+                        },
+                        _ => quote! { #field_name: &cli.#field_name, },
+                    };
+                    field_inits.push(field_init);
                 }
             }
             

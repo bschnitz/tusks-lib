@@ -132,6 +132,11 @@ impl TusksModule {
             if let Some(field_name) = &field.ident {
                 if field_name == "super_" {
                     field_inits.push(quote! { super_: super_parameters, });
+                }
+                else if field_name == "_phantom_lifetime_marker" {
+                    field_inits.push(quote! {
+                        _phantom_lifetime_marker: ::std::marker::PhantomData,
+                    });
                 } else {
                     // Find the binding for this field
                     if let Some((_, binding_name)) = bindings.iter()

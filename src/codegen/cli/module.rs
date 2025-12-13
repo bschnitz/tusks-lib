@@ -99,6 +99,11 @@ impl TusksModule{
                 continue;
             }
 
+            // Skip the _phantom_lifetime_marker
+            if field_name.as_ref().map(|id| id == "_phantom_lifetime_marker").unwrap_or(false) {
+                continue;
+            }
+
             let field_type = Self::dereference_type(&field.ty);
 
             // Filter and keep #[arg(...)] attributes with original spans
@@ -340,6 +345,10 @@ impl TusksModule{
 
             // Skip the super_ field
             if field_name.as_ref().map(|id| id == "super_").unwrap_or(false) {
+                continue;
+            }
+
+            if field_name.as_ref().map(|id| id == "_phantom_lifetime_marker").unwrap_or(false) {
                 continue;
             }
 

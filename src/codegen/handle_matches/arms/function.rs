@@ -114,8 +114,15 @@ impl TusksModule {
     /// ```rust
     /// ["arg1: p1", "arg2: p2"]
     /// ```
-    pub fn build_pattern_fields(&self, pattern_bindings: &[(syn::Ident, syn::Ident)]) -> Vec<TokenStream> {
+    pub fn build_pattern_fields(
+        &self,
+        pattern_bindings: &[(syn::Ident, syn::Ident)]
+    ) -> Vec<TokenStream> {
         pattern_bindings.iter()
+            .filter(|(field_name, _)| {
+                let field_name_str = field_name.to_string();
+                field_name_str != "_phantom_lifetime_marker"
+            })
             .map(|(field_name, binding_name)| {
                 quote! { #field_name: #binding_name }
             })

@@ -17,7 +17,7 @@ pub struct TusksModule {
     /// The Parameters struct (if not existing during parse it will be generated)
     pub parameters: Option<TusksParameters>,
     
-    /// List of all pub command functions
+    /// List of all public functions
     pub tusks: Vec<Tusk>,
     
     /// List of all pub sub-modules (recursive)
