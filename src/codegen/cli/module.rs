@@ -14,6 +14,8 @@ impl TusksModule{
     /// Generate all code inside `pub mod cli`
     pub fn build_cli(&self, path: Vec<&Ident>, debug: bool) -> TokenStream {
         let mut items = Vec::new();
+
+        items.push(quote! {use ::tusks::clap;});
         
         // 1. If root (path empty): generate Cli struct
         if path.is_empty() {
@@ -48,7 +50,7 @@ impl TusksModule{
             #(#items)*
         }
     }
-    
+
     /// Generate the root Cli struct
     fn build_cli_struct(&self, debug: bool) -> TokenStream {
         // Extract fields from parameters struct
