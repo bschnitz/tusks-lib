@@ -1,7 +1,6 @@
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 
-use crate::AttributeCheck;
 use crate::codegen::util::enum_util::convert_function_to_enum_variant;
 
 use crate::{TusksModule, models::Tusk};
