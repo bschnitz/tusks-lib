@@ -3,6 +3,16 @@ use syn::{Attribute, Meta};
 
 use crate::{AttributeValue, attribute::models::TasksConfig};
 
+pub fn add_use_staements(module: &mut ItemMod) {
+    let use_statement: Item = parse_quote! {
+        use ::tusks::clap::{CommandFactory, Parser};
+    };
+    
+    if let Some((_, ref mut items)) = module.content {
+        items.insert(0, use_statement);
+    }
+}
+
 pub fn set_allow_external_subcommands(module: &mut ItemMod) {
     if module.get_attribute_bool("command", "allow_external_subcommands") {
         return;
