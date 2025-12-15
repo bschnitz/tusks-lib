@@ -55,47 +55,33 @@ pub fn set_allow_external_subcommands(module: &mut ItemMod) {
 }
 
 pub fn add_execute_task_function(module: &mut ItemMod, config: &TasksConfig) {
-    let cmd_name = "tasks"; // TODO
     let separator = &config.separator;
     let max_groupsize = &config.max_groupsize;
     let max_depth = &config.max_depth;
     let use_colors = &config.use_colors;
-
     let function: ItemFn = parse_quote! {
         #[command(about = "Execute a task", hide=true)]
         #[default]
         pub fn _execute_task(external_args: Vec<String>) -> Option<u8> {
-            let mut transformed_arguments = Vec::new();
+            let command = __internal_tusks_module::cli::Cli::command();
             if let Some(first) = external_args.first() {
-                transformed_arguments.push(#cmd_name.to_string());
+                let mut transformed_arguments = vec![command.get_name().to_string()];
                 transformed_arguments.extend(first.split(#separator).map(|s| s.to_string()));
                 transformed_arguments.extend_from_slice(&external_args[1..]);
-                let cli = __internal_tusks_module::cli::Cli::parse_from(
-                    transformed_arguments
-                );
-                __internal_tusks_module::handle_matches(&cli)
+                let cli = __internal_tusks_module::cli::Cli::parse_from(transformed_arguments);
+                return __internal_tusks_module::handle_matches(&cli);
             }
-            else {
-                let command = __internal_tusks_module::cli::Cli::command();
-                if external_args.len() == 0 {
-                    let task_list = ::tusks::tasks::task_list::models::TaskList::from_command(
-                        &command,
-                        #separator.to_string(),
-                        #max_groupsize,
-                        #max_depth
-                    );
-                    let mut render_config = ::tusks::tasks::list::models::RenderConfig::default();
-                    render_config.use_colors = #use_colors;
-                    task_list.to_list().print(&render_config);
-                }
-                else {
-                    let cli = __internal_tusks_module::cli::Cli::parse_from(
-                        std::iter::once(#cmd_name).chain(external_args.iter().map(String::as_str))
-                    );
-                    __internal_tusks_module::handle_matches(&cli);
-                }
-                Some(0)
-            }
+            
+            let task_list = ::tusks::tasks::task_list::models::TaskList::from_command(
+                &command,
+                #separator.to_string(),
+                #max_groupsize,
+                #max_depth
+            );
+            let mut render_config = ::tusks::tasks::list::models::RenderConfig::default();
+            render_config.use_colors = #use_colors;
+            task_list.to_list().print(&render_config);
+            Some(0)
         }
     };
     
@@ -105,7 +91,6 @@ pub fn add_execute_task_function(module: &mut ItemMod, config: &TasksConfig) {
 }
 
 pub fn add_show_help_for_task(module: &mut ItemMod, config: &TasksConfig) {
-    let cmd_name = "tasks"; // TODO
     let separator = &config.separator;
     let max_groupsize = &config.max_groupsize;
     let max_depth = &config.max_depth;
@@ -114,9 +99,10 @@ pub fn add_show_help_for_task(module: &mut ItemMod, config: &TasksConfig) {
         #[command(about = "Show the help for a task", name="h", hide=true)]
         pub fn _show_help_for_task(#[arg()] task: Option<String>) {
             if let Some(task) = task {
+                let command = __internal_tusks_module::cli::Cli::command();
                 let parts: Vec<&str> = task.split(#separator).collect();
 
-                let args: Vec<&str> = std::iter::once(#cmd_name)
+                let args: Vec<&str> = std::iter::once(command.get_name())
                     .chain(parts.iter().copied())
                     .chain(std::iter::once("--help"))
                     .collect();
