@@ -183,7 +183,15 @@ impl TusksModule {
         has_commands: bool,
     ) -> TokenStream {
         if !has_commands {
-            return quote! { None };
+            let error_msg = if let Some(&last) = path.last() {
+                quote! { eprintln!("Subcommand required! Please provide a subcommand for {}!", #last); }
+            } else {
+                quote! { eprintln!("Command required! Please provide a command!"); }
+            };
+            return quote! {
+                #error_msg
+                Some(1)
+            };
         }
 
         let mut new_path = path.to_vec();

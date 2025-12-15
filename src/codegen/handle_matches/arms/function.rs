@@ -1,5 +1,5 @@
 use proc_macro2::{Span, TokenStream};
-use quote::quote;
+use quote::{format_ident, quote};
 
 use crate::codegen::util::enum_util::convert_function_to_enum_variant;
 
@@ -82,8 +82,13 @@ impl TusksModule {
             true
         );
 
+        let path_tokens = path.iter().map(|segment| {
+            let ident = format_ident!("{}", segment);
+            quote! { #ident:: }
+        });
+
         quote! {
-            Some(cli::Commands::ClapExternalSubcommand(external_subcommand_args)) => {
+            Some(cli::#(#path_tokens)*Commands::ClapExternalSubcommand(external_subcommand_args)) => {
                 #function_call
             }
         }

@@ -31,8 +31,10 @@ impl Parse for TusksAttr {
                 "root" => attr.root = parse_bool_flag(input)?,
                 "derive_debug_for_parameters" => {
                     attr.derive_debug_for_parameters = parse_bool_flag(input)?
-                }
-                "tasks" => attr.tasks = Some(parse_nested_config(input)?),
+                },
+                "tasks" => {
+                    attr.tasks = Some(parse_optional_nested_config::<TasksConfig>(input)?);
+                },
                 other => return Err(unknown_attribute_error(&ident, other)),
             }
             
@@ -40,6 +42,20 @@ impl Parse for TusksAttr {
         }
         
         Ok(attr)
+    }
+}
+
+/// Parse an optional nested configuration:
+/// - `ident(...)` → parses `T`
+/// - `ident`      → returns `T::default()`
+fn parse_optional_nested_config<T>(input: ParseStream) -> syn::Result<T>
+where
+    T: Parse + Default,
+{
+    if input.peek(syn::token::Paren) {
+        parse_nested_config(input)
+    } else {
+        Ok(T::default())
     }
 }
 

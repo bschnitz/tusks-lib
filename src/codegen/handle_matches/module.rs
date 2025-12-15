@@ -100,7 +100,7 @@ impl TusksModule {
         }
 
         if !has_default_match_arm {
-            arms.push(quote! {None => {None}});
+            arms.push(Self::build_no_command_error_arm(path));
         }
 
         // Arms for submodules
@@ -114,6 +114,25 @@ impl TusksModule {
         }
 
         arms
+    }
+
+    // TODO: there is similar code elsewhere, deduplicate!
+    fn build_no_command_error_arm(path: &[&str]) -> TokenStream {
+        if let Some(&last) = path.last() {
+            quote! {
+                None => {
+                    eprintln!("Subcommand required! Please provide a subcommand for {}!", #last);
+                    Some(1)
+                }
+            }
+        } else {
+            quote! {
+                None => {
+                    eprintln!("Command required! Please provide a command!");
+                    Some(1)
+                }
+            }
+        }
     }
     
     fn build_external_arm(&self, cli_path: &TokenStream, path: &[&str]) -> TokenStream {
