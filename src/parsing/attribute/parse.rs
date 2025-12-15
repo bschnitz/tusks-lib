@@ -83,12 +83,12 @@ impl Parse for TasksConfig {
         
         while !input.is_empty() {
             let ident: Ident = input.parse()?;
-            input.parse::<Token![=]>()?;
             
             match ident.to_string().as_str() {
-                "max_groupsize" => config.max_groupsize = parse_usize(input)?,
-                "max_depth" => config.max_depth = parse_usize(input)?,
-                "separator" => config.separator = parse_string(input)?,
+                "max_groupsize" => config.max_groupsize = parse_required_value(input, parse_usize)?,
+                "max_depth" => config.max_depth = parse_required_value(input, parse_usize)?,
+                "separator" => config.separator = parse_required_value(input, parse_string)?,
+                "use_colors" => config.use_colors = parse_bool_flag(input)?,
                 other => return Err(unknown_parameter_error(&ident, other)),
             }
             
@@ -110,6 +110,15 @@ fn parse_bool_flag(input: ParseStream) -> syn::Result<bool> {
     } else {
         Ok(true)
     }
+}
+
+/// Parse a required parameter value: `= <value>`
+fn parse_required_value<T, F>(input: ParseStream, parser: F) -> syn::Result<T>
+where
+    F: FnOnce(ParseStream) -> syn::Result<T>,
+{
+    input.parse::<Token![=]>()?;
+    parser(input)
 }
 
 /// Parse a nested configuration like `tasks(...)`
